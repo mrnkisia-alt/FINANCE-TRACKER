@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Personal weekly finance tracker — track 4 weeks of daily Cash In and Expenses in KES.">
+    <meta name="theme-color" content="#00d4ff">
+
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="manifest.json">
+
+    <!-- iOS PWA support -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Ledger">
+    <link rel="apple-touch-icon" href="icon-512.png">
+
+    <title>Finance Tracker</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <div id="app" class="app-container">
+
+        <!-- Header -->
+        <header class="header glass-panel">
+            <h1 class="header-title">Monthly Ledger</h1>
+
+            <div class="summary-cards">
+                <div class="card income-card">
+                    <span class="label">Total In</span>
+                    <span class="value" id="monthly-in">$0.00</span>
+                </div>
+                <div class="card expense-card">
+                    <span class="label">Total Out</span>
+                    <span class="value" id="monthly-out">$0.00</span>
+                </div>
+                <div class="card balance-card">
+                    <span class="label">Net Balance</span>
+                    <span class="value" id="monthly-balance">$0.00</span>
+                </div>
+            </div>
+
+            <div class="header-actions">
+                <button class="neon-btn reset-btn" onclick="startNewMonth()">⟳ New Month</button>
+                <button class="neon-btn export-btn" onclick="exportToCSV()">↓ Save as CSV</button>
+            </div>
+
+            <div class="save-status" id="save-status">
+                <span id="save-status-text">Data saved locally ✓</span>
+            </div>
+        </header>
+
+        <!-- Weeks Grid -->
+        <main id="weeks-container" class="weeks-grid">
+            <!-- injected by JavaScript -->
+        </main>
+    </div>
+
+    <!-- Templates -->
+    <template id="week-template">
+        <section class="week-card glass-panel">
+            <h2 class="week-title">Week <span class="week-num"></span></h2>
+            <div class="days-container"></div>
+            <div class="week-summary">
+                <div class="wk-stat">
+                    <span class="wk-label">In</span>
+                    <b class="wk-in">$0.00</b>
+                </div>
+                <div class="wk-stat">
+                    <span class="wk-label">Out</span>
+                    <b class="wk-out">$0.00</b>
+                </div>
+                <div class="wk-stat">
+                    <span class="wk-label">Balance</span>
+                    <b class="wk-balance">$0.00</b>
+                </div>
+            </div>
+        </section>
+    </template>
+
+    <template id="day-template">
+        <div class="day-row">
+            <div class="day-info">
+                <span class="day-name"></span>
+                <input type="date" class="day-date">
+            </div>
+            <input type="number" step="0.01" class="neon-input cash-in" placeholder="Cash In" min="0" inputmode="decimal">
+            <input type="number" step="0.01" class="neon-input expense"  placeholder="Expense"  min="0" inputmode="decimal">
+            <div class="day-balance">
+                <span class="db-val">$0.00</span>
+            </div>
+        </div>
+    </template>
+
+    <script src="script.js"></script>
+
+    <!-- Register Service Worker for offline support -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js')
+                    .then(reg => console.log('SW registered:', reg.scope))
+                    .catch(err => console.warn('SW registration failed:', err));
+            });
+        }
+    </script>
+</body>
+</html>

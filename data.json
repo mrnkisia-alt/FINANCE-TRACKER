@@ -1,0 +1,9 @@
+{
+    "weeks": [
+        { "days": [{"in":0,"out":0},{"in":0,"out":0},{"in":0,"out":0},{"in":0,"out":0},{"in":0,"out":0}] },
+        { "days": [{"in":0,"out":0},{"in":0,"out":0},{"in":0,"out":0},{"in":0,"out":0},{"in":0,"out":0}] },
+        { "days": [{"in":0,"out":0},{"in":0,"out":0},{"in":0,"out":0},{"in":0,"out":0},{"in":0,"out":0}] },
+        { "days": [{"in":0,"out":0},{"in":0,"out":0},{"in":0,"out":0},{"in":0,"out":0},{"in":0,"out":0}] }
+    ],
+    "lastUpdated": null
+}
