@@ -7,7 +7,7 @@ let financeData = blankState();
 function blankState() {
     return {
         weeks: Array.from({ length: 4 }, () => ({
-            days: Array.from({ length: 5 }, () => ({ in: 0, out: 0, date: "" }))
+            days: Array.from({ length: 5 }, () => ({ in: [], out: [], date: "" }))
         }))
     };
 }
@@ -39,25 +39,26 @@ function initBoard() {
             let dayNode = document.importNode(dayTpl, true);
             dayNode.querySelector(".day-name").textContent = dayNames[dIndex];
 
+            const dateInput = dayNode.querySelector(".day-date");
             const inInput   = dayNode.querySelector(".cash-in");
             const outInput  = dayNode.querySelector(".expense");
-            const dateInput = dayNode.querySelector(".day-date");
 
+            dateInput.dataset.w = wIndex;
+            dateInput.dataset.d = dIndex;
             inInput.dataset.w   = wIndex;
             inInput.dataset.d   = dIndex;
             outInput.dataset.w  = wIndex;
             outInput.dataset.d  = dIndex;
-            dateInput.dataset.w = wIndex;
-            dateInput.dataset.d = dIndex;
 
-            // Restore saved values
-            if (day.in  > 0) inInput.value  = day.in;
-            if (day.out > 0) outInput.value = day.out;
-            if (day.date)    dateInput.value = day.date;
+            if (day.date) dateInput.value = day.date;
 
-            inInput.addEventListener("input",  handleInput);
-            outInput.addEventListener("input", handleInput);
             dateInput.addEventListener("change", handleDateInput);
+            inInput.addEventListener("keydown", handleKeyAdd);
+            outInput.addEventListener("keydown", handleKeyAdd);
+
+            // Render existing chips
+            renderChips(dayNode.querySelector(".income-entries"),  day.in,  wIndex, dIndex, 'in');
+            renderChips(dayNode.querySelector(".expense-entries"), day.out, wIndex, dIndex, 'out');
 
             daysContainer.appendChild(dayNode);
         });
@@ -70,23 +71,67 @@ function initBoard() {
     });
 }
 
+function renderChips(container, values, w, d, type) {
+    container.innerHTML = "";
+    let sum = 0;
+    values.forEach((val, idx) => {
+        sum += val;
+        const chip = document.createElement("div");
+        chip.className = "entry-chip";
+        chip.innerHTML = `${val.toLocaleString()} <span style="opacity:0.5; margin-left:4px;">×</span>`;
+        chip.onclick = (e) => {
+            e.stopPropagation(); // prevent closing drawer
+            removeEntry(w, d, type, idx);
+        };
+        container.appendChild(chip);
+    });
+
+    // Update the total display next to the drawer
+    const wrapper = container.closest(".entries-wrapper");
+    const totalDisplay = wrapper.querySelector(".total-display");
+    totalDisplay.textContent = formatMoney(sum);
+}
+
+function toggleDetails(el) {
+    const drawer = el.nextElementSibling;
+    const isExpanded = drawer.classList.contains("expanded");
+    
+    // Close all other drawers in the same day or week for focus? 
+    // Or just toggle this one.
+    drawer.classList.toggle("expanded");
+}
+
 // ═══════════════════════════════════════════════════════════════
 //  INPUT HANDLER
 // ═══════════════════════════════════════════════════════════════
-function handleInput(e) {
+function handleKeyAdd(e) {
+    if (e.key !== "Enter") return;
     const input = e.target;
     const w = parseInt(input.dataset.w);
     const d = parseInt(input.dataset.d);
+    const type = input.classList.contains("cash-in") ? "in" : "out";
 
     let val = round2(parseFloat(input.value) || 0);
-    if (val < 0) { val = 0; input.value = ""; }
+    if (val <= 0) return;
 
-    if (input.classList.contains("cash-in")) {
-        financeData.weeks[w].days[d].in = val;
-    } else {
-        financeData.weeks[w].days[d].out = val;
-    }
+    financeData.weeks[w].days[d][type].push(val);
+    input.value = "";
 
+    // Refresh UI for this day
+    const dayRow = input.closest(".day-row");
+    const container = dayRow.querySelector(`.${type === 'in' ? 'income' : 'expense'}-entries`);
+    renderChips(container, financeData.weeks[w].days[d][type], w, d, type);
+
+    updateCalculations();
+    saveToStorage();
+}
+
+function removeEntry(w, d, type, idx) {
+    financeData.weeks[w].days[d][type].splice(idx, 1);
+    
+    // Refresh the whole board (simplest way to ensure all containers stay in sync)
+    // For better performance, we could target just the specific container
+    initBoard(); 
     updateCalculations();
     saveToStorage();
 }
@@ -97,6 +142,32 @@ function handleDateInput(e) {
     const d = parseInt(input.dataset.d);
 
     financeData.weeks[w].days[d].date = input.value;
+    
+    // Sync full month if Week 1 Monday is set
+    if (w === 0 && d === 0 && input.value) {
+        syncAllDates(input.value);
+    } else {
+        saveToStorage();
+    }
+}
+
+function syncAllDates(baseDateStr) {
+    const baseDate = new Date(baseDateStr);
+    if (isNaN(baseDate.getTime())) return;
+
+    financeData.weeks.forEach((week, wIdx) => {
+        week.days.forEach((day, dIdx) => {
+            // Monday of each week is +7 days from previous Monday
+            // Day D of each week is Monday + D days
+            const date = new Date(baseDate);
+            date.setDate(baseDate.getDate() + (wIdx * 7) + dIdx);
+            
+            day.date = date.toISOString().split('T')[0];
+        });
+    });
+
+    initBoard();
+    updateCalculations();
     saveToStorage();
 }
 
@@ -119,10 +190,13 @@ function updateCalculations() {
         const daysDom = weeksDom[wIndex].querySelectorAll(".day-row");
 
         week.days.forEach((day, dIndex) => {
-            wkIn  = round2(wkIn  + day.in);
-            wkOut = round2(wkOut + day.out);
+            const sumIn  = day.in.reduce((a, b) => a + b, 0);
+            const sumOut = day.out.reduce((a, b) => a + b, 0);
 
-            const dayDb       = round2(day.in - day.out);
+            wkIn  = round2(wkIn  + sumIn);
+            wkOut = round2(wkOut + sumOut);
+
+            const dayDb       = round2(sumIn - sumOut);
             const displayNode = daysDom[dIndex].querySelector(".db-val");
             displayNode.textContent = formatMoney(dayDb);
             displayNode.classList.remove("positive", "negative");
@@ -180,6 +254,13 @@ function loadFromStorage() {
         if (!raw) return;
         const parsed = JSON.parse(raw);
         if (parsed && Array.isArray(parsed.weeks) && parsed.weeks.length === 4) {
+            // Migration: Ensure in/out are arrays
+            parsed.weeks.forEach(week => {
+                week.days.forEach(day => {
+                    if (typeof day.in  === 'number') day.in  = day.in > 0 ? [day.in] : [];
+                    if (typeof day.out === 'number') day.out = day.out > 0 ? [day.out] : [];
+                });
+            });
             financeData = parsed;
         }
     } catch (e) {
@@ -208,15 +289,19 @@ function exportToCSV() {
     financeData.weeks.forEach((week, wIndex) => {
         let wkIn = 0, wkOut = 0;
         week.days.forEach((day, dIndex) => {
-            const dayBal = round2(day.in - day.out);
-            wkIn  = round2(wkIn  + day.in);
-            wkOut = round2(wkOut + day.out);
+            const sumIn  = day.in.reduce((a, b) => a + b, 0);
+            const sumOut = day.out.reduce((a, b) => a + b, 0);
+            const dayBal = round2(sumIn - sumOut);
+
+            wkIn  = round2(wkIn  + sumIn);
+            wkOut = round2(wkOut + sumOut);
+
             rows.push([
                 `Week ${wIndex + 1}`,
                 dayNames[dIndex],
                 day.date || "",
-                day.in.toFixed(2),
-                day.out.toFixed(2),
+                sumIn.toFixed(2),
+                sumOut.toFixed(2),
                 dayBal.toFixed(2)
             ]);
         });

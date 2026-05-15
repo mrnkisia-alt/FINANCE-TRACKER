@@ -88,8 +88,25 @@
                 <span class="day-name"></span>
                 <input type="date" class="day-date">
             </div>
-            <input type="number" step="0.01" class="neon-input cash-in" placeholder="Cash In" min="0" inputmode="decimal">
-            <input type="number" step="0.01" class="neon-input expense"  placeholder="Expense"  min="0" inputmode="decimal">
+
+            <!-- Incomes -->
+            <div class="entries-wrapper in">
+                <div class="total-display in" onclick="toggleDetails(this)">$0.00</div>
+                <div class="details-drawer">
+                    <div class="entries-list income-entries"></div>
+                    <input type="number" step="0.01" class="chip-input cash-in" placeholder="+ Income" min="0" inputmode="decimal">
+                </div>
+            </div>
+
+            <!-- Expenses -->
+            <div class="entries-wrapper out">
+                <div class="total-display out" onclick="toggleDetails(this)">$0.00</div>
+                <div class="details-drawer">
+                    <div class="entries-list expense-entries"></div>
+                    <input type="number" step="0.01" class="chip-input expense" placeholder="+ Expense" min="0" inputmode="decimal">
+                </div>
+            </div>
+
             <div class="day-balance">
                 <span class="db-val">$0.00</span>
             </div>
